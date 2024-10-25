@@ -141,19 +141,43 @@ defmodule Drops.Type.DSL do
   end
 
   @doc ~S"""
-  Returns a union type specification.
-
+  Returns a union type specification that allows multiple possible types.
+  
   ## Examples
-
+  
       # either a nil or a string
       union([:nil, :string])
-
+  
+      # either a list of strings or a single string
+      union([
+        list(string()),
+        string()
+      ])
+  
+      # either a nil or a filled string
+      union([:nil, :string], [:filled?])
+  
+      # either an integer greater than 18 or a string
+      union([
+        integer(gt?: 18),
+        string()
+      ])
   """
-
+  @doc since: "0.1.0"
   def union([type | rest], predicates \\ []) do
     case rest do
-      [] -> type(type, predicates)
-      _ -> {:union, {type(type, predicates), type(rest, predicates)}}
+      [] -> 
+        case type do
+          {:type, _} = t -> t
+          other -> type(other, predicates)
+        end
+      _ -> 
+        first = case type do
+          {:type, _} = t -> t
+          other -> type(other, predicates)
+        end
+        rest_type = union(rest, predicates)
+        {:union, {first, rest_type}}
     end
   end
 
